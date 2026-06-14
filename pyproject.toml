@@ -1,0 +1,154 @@
+[project]
+name = "std-qwen3-asr"
+version = "0.1.0"
+description = "Standard ASR plugin for Qwen3-ASR served over a vLLM (OpenAI-compatible) backend, with streaming."
+readme = "README.md"
+requires-python = ">=3.10"
+# PEP 639: SPDX license expression + license file (not the deprecated classifier).
+license = "Apache-2.0"
+license-files = ["LICENSE"]
+authors = [{ name = "Standard Voice Contributors" }]
+keywords = ["asr", "speech-to-text", "qwen", "qwen3-asr", "vllm", "standard-asr", "streaming"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3 :: Only",
+    "Topic :: Multimedia :: Sound/Audio :: Speech",
+    "Typing :: Typed",
+]
+
+# Core dependencies. ``httpx`` is the async-first HTTP client used for both the
+# batch (multipart) and streaming (SSE / WebSocket) backends; ``websockets`` is
+# only needed for the vLLM Realtime streaming path. Both are lightweight, pure
+# clients -- this plugin NEVER imports vLLM or torch (license + dependency
+# isolation, spec G.4.2): vLLM is the *remote runtime*, not a local dependency.
+dependencies = [
+    "standard-asr>=0.1.0",
+    "httpx>=0.27",
+    "websockets>=13.0",
+]
+
+[project.optional-dependencies]
+# Decoding/resampling for the batch path (e.g. resample to 16 kHz mono before
+# upload). The standard layer's audio negotiation provides this when installed.
+audio = ["standard-asr[audio]>=0.1.0"]
+
+[project.urls]
+Homepage = "https://github.com/standard-voice/std-qwen3-asr"
+"Standard ASR" = "https://github.com/standard-voice/standard_asr"
+"Qwen3-ASR (upstream)" = "https://github.com/QwenLM/Qwen3-ASR"
+
+# --------------------------------------------------------------------------- #
+# Entry points: one per preset (spec IC.7 -- model selection is the preset you
+# instantiate, never an init ``model`` field). We register the hosted DashScope
+# Flash service and the two open-weight checkpoints commonly served by vLLM.
+# --------------------------------------------------------------------------- #
+[project.entry-points."standard_asr.models"]
+"qwen3-asr/flash" = "std_qwen3_asr.entrypoint:create_flash"
+"qwen3-asr/1.7b" = "std_qwen3_asr.entrypoint:create_1_7b"
+"qwen3-asr/0.6b" = "std_qwen3_asr.entrypoint:create_0_6b"
+
+[build-system]
+requires = ["uv-build>=0.9,<0.12"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-root = "src"
+module-name = "std_qwen3_asr"
+
+[tool.uv.sources]
+standard-asr = { git = "https://github.com/standard-voice/standard_asr.git", rev = "refactor/v0.1.0-redesign" }
+
+[dependency-groups]
+dev = [
+    "pytest>=8.4.1",
+    "pytest-cov>=7.0.0",
+    "pytest-asyncio>=0.24.0",
+    "ruff>=0.8.0",
+    "pyright>=1.1.390",
+    "fastapi>=0.115",
+    "uvicorn>=0.32",
+    "websockets>=13.0",
+    "httpx>=0.27",
+    "python-multipart>=0.0.32",
+]
+
+[tool.pytest.ini_options]
+addopts = [
+    "-q",
+    "--cov=std_qwen3_asr",
+    "--cov-branch",
+    "--cov-report=term-missing:skip-covered",
+    "--cov-fail-under=100",
+]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+# Warnings-as-errors mirrors the core suite: our own deprecations/bugs fail.
+# The websockets.legacy deprecation is third-party (pulled in transitively by
+# uvicorn's optional WS support, which our tests do not use); ignore that one
+# specific warning rather than letting an upstream deprecation fail our suite.
+filterwarnings = [
+    "error",
+    "ignore:websockets.legacy is deprecated:DeprecationWarning",
+    "ignore:remove second argument of ws_handler:DeprecationWarning",
+    # The in-process fake server runs uvicorn in a background thread; asyncio /
+    # uvicorn occasionally GC a lingering listener socket or event loop AFTER a
+    # test finishes, surfacing as a ResourceWarning from test infrastructure (not
+    # from the plugin -- the plugin closes its httpx client on the batch path and
+    # uses ``async with`` for streaming). Ignore it so upstream/thread teardown
+    # noise does not fail the suite; the plugin's own hygiene is covered directly.
+    "ignore::ResourceWarning",
+]
+
+[tool.coverage.run]
+branch = true
+source = ["std_qwen3_asr"]
+
+[tool.coverage.report]
+exclude_also = [
+    "if TYPE_CHECKING:",
+    "raise NotImplementedError",
+    "@(abc\\.)?abstractmethod",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+# Mirror the core repo's rigor: pycodestyle, pyflakes, isort, bugbear, pyupgrade,
+# and NPY201 (numpy 2 migration, required by AGENTS.md).
+select = ["E", "F", "I", "B", "UP", "NPY201", "W"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["B011"]
+# The mock-server demo must import the test fake AFTER inserting tests/ on the
+# path, so its import block is intentionally not top-sorted.
+"examples/stream_against_mock.py" = ["E402", "I001"]
+
+[tool.pyright]
+include = ["src", "tests"]
+pythonVersion = "3.10"
+# The library source is held to STRICT typing (the public contract that other
+# packages build on). Test code is checked at "standard" level: it legitimately
+# works with inherently-dynamic shapes (untyped JSON request bodies captured by
+# the fake server, FastAPI form items, ``object``-typed event collections) where
+# strict's "unknown type" noise would obscure real errors. Standard mode still
+# catches genuine type mistakes in the tests.
+typeCheckingMode = "strict"
+reportMissingTypeStubs = false
+
+[[tool.pyright.executionEnvironments]]
+root = "tests"
+reportUnknownMemberType = false
+reportUnknownVariableType = false
+reportUnknownArgumentType = false
+reportUnknownParameterType = false
+reportUnknownLambdaType = false
+reportMissingParameterType = false
+reportPrivateUsage = false
+reportAttributeAccessIssue = false
+# FastAPI route handlers are nested functions registered by a decorator, so
+# pyright flags them as "unused"; that is expected for the fake server.
+reportUnusedFunction = false
