@@ -164,22 +164,21 @@ def test_config_base_url_none_passthrough() -> None:
 
 
 def test_config_rejects_non_http_base_url() -> None:
-    # The ConfigError raised in the validator is wrapped by pydantic into a
-    # ValidationError at construction (ConfigError is a ValueError subclass).
+    # Construct directly to assert the validator's specific message: from_env wraps
+    # validation failures into a ConfigError whose offending value is redacted, so
+    # only direct construction surfaces the raw pydantic ValidationError.
     with pytest.raises(ValidationError, match="http"):
-        Qwen3ASRConfig.from_env("qwen3-asr", base_url="ftp://example.com")
+        Qwen3ASRConfig(base_url="ftp://example.com")
 
 
 def test_config_rejects_hostless_base_url() -> None:
     with pytest.raises(ValidationError, match="host"):
-        Qwen3ASRConfig.from_env("qwen3-asr", base_url="http://")
+        Qwen3ASRConfig(base_url="http://")
 
 
 def test_config_dashscope_requires_https() -> None:
     with pytest.raises(ValidationError, match="https"):
-        Qwen3ASRConfig.from_env(
-            "qwen3-asr", backend="dashscope", base_url="http://dashscope.example.com/v1"
-        )
+        Qwen3ASRConfig(backend="dashscope", base_url="http://dashscope.example.com/v1")
 
 
 def test_config_dashscope_https_ok() -> None:

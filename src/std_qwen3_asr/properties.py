@@ -6,7 +6,7 @@
 Properties are the engine's fixed, machine-readable identity (spec G.1.3): what
 audio shapes it accepts, its sample-rate boundaries, the streaming wire encoding
 whitelist, size/duration limits, and the BCP-47 languages it can select/detect.
-They are read off the *class* without instantiation (discovery, ``models show``,
+They are read off the *class* without instantiation (discovery, ``show``,
 REST ``GET /v1/capabilities``), so they live as ``ClassVar`` instances.
 
 Audio shape rationale:
@@ -38,7 +38,7 @@ from __future__ import annotations
 
 from typing import Literal
 
-from standard_asr import BaseProperties, InputKind, SampleRateRange
+from standard_asr.engine import BaseProperties, InputKind, SampleRateRange
 
 from .languages import DETECTABLE_LANGUAGES, SELECTABLE_LANGUAGES
 

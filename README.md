@@ -61,7 +61,7 @@ no torch.
 ### Discover it
 
 ```bash
-standard-asr models list
+standard-asr list
 #  - qwen3-asr/flash  engine=qwen3-asr  model=flash
 #  - qwen3-asr/1.7b   engine=qwen3-asr  model=1.7b
 #  - qwen3-asr/0.6b   engine=qwen3-asr  model=0.6b

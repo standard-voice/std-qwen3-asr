@@ -29,15 +29,17 @@ from typing import Any, ClassVar, cast
 
 import numpy as np
 from standard_asr import (
-    BaseConfig,
-    BaseProperties,
-    EngineBase,
-    PreparedAudio,
     RuntimeParams,
     TranscriptionResult,
 )
 from standard_asr.audio_format import AudioFormat
 from standard_asr.capabilities import DeclaredCapabilities
+from standard_asr.engine import (
+    BaseConfig,
+    BaseProperties,
+    EngineBase,
+    PreparedAudio,
+)
 from standard_asr.exceptions import ConfigError, TranscriptionError
 from standard_asr.language import effective_language
 from standard_asr.results import Diagnostic
@@ -374,16 +376,19 @@ class Qwen3ASR(EngineBase):
         else:
             # Decode encoded bytes/path to a float32 mono array at the native rate
             # via the standard loader (it resamples to ``target_sr`` for us).
-            from standard_asr import load_audio_from_bytes, load_audio_from_path
+            from standard_asr.utils.audio_loader import (
+                load_audio_from_bytes,
+                load_audio_from_path,
+            )
 
             if prepared.data is None and prepared.path is None:  # pragma: no cover - defensive
                 raise TranscriptionError("No audio payload present for streaming whole input.")
             try:
                 if prepared.data is not None:
-                    samples = load_audio_from_bytes(prepared.data, target_sr=native)
+                    samples = load_audio_from_bytes(prepared.data, target_sample_rate=native)
                 else:
                     assert prepared.path is not None  # narrowed above
-                    samples = load_audio_from_path(prepared.path, target_sr=native)
+                    samples = load_audio_from_path(prepared.path, target_sample_rate=native)
             except Exception as exc:  # noqa: BLE001
                 raise TranscriptionError(
                     f"Failed to decode whole-input audio for streaming: {type(exc).__name__}."

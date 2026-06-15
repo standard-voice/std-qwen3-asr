@@ -57,7 +57,11 @@ module-root = "src"
 module-name = "std_qwen3_asr"
 
 [tool.uv.sources]
-standard-asr = { git = "https://github.com/standard-voice/standard_asr.git", rev = "refactor/v0.1.0-redesign" }
+# Local development override (the `[project]` dependency stays pinned to git for a
+# publish-ready manifest): resolve `standard-asr` from the co-located monorepo
+# checkout so the plugin shares one `standard-asr` install with the demo app and
+# sibling plugins, and protocol edits are picked up immediately.
+standard-asr = { path = "../standard_asr", editable = true }
 
 [dependency-groups]
 dev = [

@@ -101,7 +101,7 @@ file on this machine. The transcript text returned is the mock's scripted value
 ### 3. Discovery + compliance CLI (all three presets)
 
 ```
-$ uv run standard-asr models list
+$ uv run standard-asr list
  - qwen3-asr/0.6b   engine=qwen3-asr  model=0.6b
  - qwen3-asr/1.7b   engine=qwen3-asr  model=1.7b
  - qwen3-asr/flash  engine=qwen3-asr  model=flash

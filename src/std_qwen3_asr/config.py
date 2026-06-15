@@ -24,7 +24,7 @@ from typing import Literal
 from urllib.parse import urlparse
 
 from pydantic import Field, field_validator, model_validator
-from standard_asr import BaseConfig, CredentialsConfigMixin, LanguageConfigMixin
+from standard_asr.engine import BaseConfig, CredentialsConfigMixin, LanguageConfigMixin
 from standard_asr.exceptions import ConfigError
 
 #: Backend transport selector. ``"vllm"`` speaks the OpenAI-compatible
