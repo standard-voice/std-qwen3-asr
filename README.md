@@ -48,15 +48,17 @@ config `backend=...`.
 
 ## Install
 
+> **Not yet published to PyPI** — install from GitHub:
+
 ```bash
-# In an app that already depends on standard-asr:
-uv add std-qwen3-asr
+uv pip install git+https://github.com/standard-voice/std-qwen3-asr
 # Optional: high-quality audio decode/resample for the batch path
-uv add "std-qwen3-asr[audio]"
+uv pip install "std-qwen3-asr[audio] @ git+https://github.com/standard-voice/std-qwen3-asr.git"
 ```
 
-This package depends only on `standard-asr`, `httpx`, and `websockets` — no vLLM,
-no torch.
+This package depends only on `standard-asr` (from GitHub `main`), `httpx`, and
+`websockets` — no vLLM, no torch. Once published to PyPI this becomes
+`uv pip install std-qwen3-asr`.
 
 ## Quick start
 

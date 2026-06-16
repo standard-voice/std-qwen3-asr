@@ -23,7 +23,9 @@ classifiers = [
 # clients -- this plugin NEVER imports vLLM or torch (license + dependency
 # isolation, spec G.4.2): vLLM is the *remote runtime*, not a local dependency.
 dependencies = [
-    "standard-asr>=0.1.0",
+    # Pinned to GitHub `main` until standard-asr cuts its first PyPI release; swap
+    # to a version specifier (>=0.1.0) at that point.
+    "standard-asr @ git+https://github.com/standard-voice/standard_asr.git@main",
     "httpx>=0.27",
     "websockets>=13.0",
 ]
@@ -31,7 +33,7 @@ dependencies = [
 [project.optional-dependencies]
 # Decoding/resampling for the batch path (e.g. resample to 16 kHz mono before
 # upload). The standard layer's audio negotiation provides this when installed.
-audio = ["standard-asr[audio]>=0.1.0"]
+audio = ["standard-asr[audio] @ git+https://github.com/standard-voice/standard_asr.git@main"]
 
 [project.urls]
 Homepage = "https://github.com/standard-voice/std-qwen3-asr"
@@ -56,12 +58,11 @@ build-backend = "uv_build"
 module-root = "src"
 module-name = "std_qwen3_asr"
 
-[tool.uv.sources]
-# Local development override (the `[project]` dependency stays pinned to git for a
-# publish-ready manifest): resolve `standard-asr` from the co-located monorepo
-# checkout so the plugin shares one `standard-asr` install with the demo app and
-# sibling plugins, and protocol edits are picked up immediately.
-standard-asr = { path = "../standard_asr", editable = true }
+# No `[tool.uv.sources]` override: `standard-asr` resolves straight from the
+# `[project]` dependency above (GitHub `main`), so `uv pip install
+# git+https://github.com/standard-voice/std-qwen3-asr` works standalone — a local
+# path override here would make uv resolve it from a non-existent subdirectory of
+# the installed package.
 
 [dependency-groups]
 dev = [
