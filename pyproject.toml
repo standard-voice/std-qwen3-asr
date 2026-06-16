@@ -10,7 +10,7 @@ license-files = ["LICENSE"]
 authors = [{ name = "Standard Voice Contributors" }]
 keywords = ["asr", "speech-to-text", "qwen", "qwen3-asr", "vllm", "standard-asr", "streaming"]
 classifiers = [
-    "Development Status :: 4 - Beta",
+    "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
     "Programming Language :: Python :: 3 :: Only",
     "Topic :: Multimedia :: Sound/Audio :: Speech",

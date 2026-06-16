@@ -1,5 +1,7 @@
 # std-qwen3-asr
 
+> ⚠️ **Experimental — for protocol testing.** This is an experimental Standard ASR engine plugin, published to exercise and validate the [Standard ASR](https://github.com/standard-voice/standard_asr) interface. Expect breaking changes; it is not production-ready.
+
 A [Standard ASR](https://github.com/standard-voice/standard_asr) engine plugin for
 **Qwen3-ASR served over a vLLM backend**, with batch **and** streaming
 transcription. Install it alongside `standard-asr` and any app that speaks the

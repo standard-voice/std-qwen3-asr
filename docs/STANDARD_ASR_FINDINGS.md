@@ -1,7 +1,7 @@
 # Standard ASR findings — adapting Qwen3-ASR (vLLM backend)
 
 Every problem, blocker, DX gap, and design issue hit while building this plugin
-against Standard ASR `refactor/v0.1.0-redesign`. The goal is to stress-test the
+against Standard ASR `main`. The goal is to stress-test the
 protocol's developer experience, especially the **streaming** path. For each item:
 what happened, why it mattered, and a concrete suggested improvement.
 
