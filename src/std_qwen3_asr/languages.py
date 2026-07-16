@@ -22,7 +22,7 @@ different things on different backends" trap (spec Runtime §6).
 
 from __future__ import annotations
 
-from standard_asr.language import normalize_bcp47
+from standard_asr.contract.language import normalize_bcp47
 
 #: BCP-47 primary subtag -> (DashScope ISO code, open-weight English name).
 #:

@@ -95,7 +95,7 @@ print(result.text)
 ```python
 import asyncio
 from standard_asr import discover_models
-from standard_asr.audio_format import AudioFormat
+from standard_asr.audio.format import AudioFormat
 
 async def main():
     asr = discover_models().create("qwen3-asr/1.7b", base_url="http://your-gpu-host:8000/v1")

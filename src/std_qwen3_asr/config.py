@@ -25,7 +25,7 @@ from urllib.parse import urlparse
 
 from pydantic import Field, field_validator, model_validator
 from standard_asr.engine import BaseConfig, CredentialsConfigMixin, LanguageConfigMixin
-from standard_asr.exceptions import ConfigError
+from standard_asr.contract.exceptions import ConfigError
 
 #: Backend transport selector. ``"vllm"`` speaks the OpenAI-compatible
 #: ``/v1/audio/transcriptions`` (batch) + SSE/WebSocket (streaming) protocol of a

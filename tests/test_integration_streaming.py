@@ -20,9 +20,9 @@ from __future__ import annotations
 
 import pytest
 from standard_asr import AudioPath, RuntimeParams, SyncSession
-from standard_asr.audio_format import AudioFormat
+from standard_asr.audio.format import AudioFormat
 from standard_asr.compliance import check_event_sequence
-from standard_asr.streaming import TranscriptionEvent, TranscriptionSession, reduce_event
+from standard_asr.runtime.streaming import TranscriptionEvent, TranscriptionSession, reduce_event
 
 from std_qwen3_asr import Qwen3ASR, Qwen3ASR17B, Qwen3ASRParams
 

@@ -24,7 +24,7 @@ import sys
 from pathlib import Path
 
 import numpy as np
-from standard_asr.audio_format import AudioFormat
+from standard_asr.audio.format import AudioFormat
 
 # Make the test-suite fake server importable when run from the repo root.
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "tests"))

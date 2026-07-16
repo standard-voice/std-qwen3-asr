@@ -4,7 +4,7 @@
 """Streaming session: maps Qwen3-ASR backend deltas to Standard ASR events.
 
 This is the core of the streaming integration. The base
-:class:`~standard_asr.streaming.TranscriptionSession` owns the pump,
+:class:`~standard_asr.runtime.streaming.TranscriptionSession` owns the pump,
 backpressure, deadlines, lifecycle enforcement, the sync bridge, and result
 reduction; we implement only :meth:`_produce` (async).
 
@@ -37,7 +37,7 @@ from __future__ import annotations
 from collections.abc import AsyncIterator
 from typing import Any
 
-from standard_asr.streaming import TranscriptionEvent, TranscriptionSession
+from standard_asr.runtime.streaming import TranscriptionEvent, TranscriptionSession
 
 from .backends.base import Backend, StreamRequest
 from .languages import from_backend_language

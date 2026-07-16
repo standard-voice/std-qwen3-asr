@@ -10,8 +10,8 @@ from typing import cast
 import numpy as np
 import pytest
 from standard_asr import AudioArray, AudioBytes
-from standard_asr.audio_format import AudioFormat
-from standard_asr.exceptions import TranscriptionError
+from standard_asr.audio.format import AudioFormat
+from standard_asr.contract.exceptions import TranscriptionError
 
 from std_qwen3_asr import Qwen3ASR, Qwen3ASR17B, Qwen3ASRConfig
 from std_qwen3_asr._audio import float32_to_pcm16, wrap_pcm16_wav

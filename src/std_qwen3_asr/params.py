@@ -23,7 +23,7 @@ so swap-safety has something exact to check against (spec Runtime §3.2).
 from __future__ import annotations
 
 from pydantic import Field
-from standard_asr.runtime_params import ProviderParams
+from standard_asr.contract.params import ProviderParams
 
 
 class Qwen3ASRParams(ProviderParams):

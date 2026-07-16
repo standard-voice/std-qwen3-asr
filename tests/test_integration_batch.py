@@ -15,7 +15,7 @@ from __future__ import annotations
 import numpy as np
 import pytest
 from standard_asr import AudioArray, RuntimeParams
-from standard_asr.exceptions import ConfigError, TranscriptionError
+from standard_asr.contract.exceptions import ConfigError, TranscriptionError
 
 from std_qwen3_asr import Qwen3ASR, Qwen3ASR17B, Qwen3ASRParams
 

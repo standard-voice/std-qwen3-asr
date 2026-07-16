@@ -11,7 +11,7 @@ real recorded stream in ``test_integration_streaming.py``; the rest live here.
 
 from __future__ import annotations
 
-from standard_asr.audio_format import AudioFormat
+from standard_asr.audio.format import AudioFormat
 from standard_asr.compliance import (
     check_entrypoints,
     check_provider_params_swap_safety,

@@ -32,19 +32,19 @@ from standard_asr import (
     RuntimeParams,
     TranscriptionResult,
 )
-from standard_asr.audio_format import AudioFormat
-from standard_asr.capabilities import DeclaredCapabilities
+from standard_asr.audio.format import AudioFormat
+from standard_asr.contract.capabilities import DeclaredCapabilities
 from standard_asr.engine import (
     BaseConfig,
     BaseProperties,
     EngineBase,
     PreparedAudio,
 )
-from standard_asr.exceptions import ConfigError, TranscriptionError
-from standard_asr.language import effective_language
-from standard_asr.results import Diagnostic
-from standard_asr.runtime_params import ProviderParams
-from standard_asr.streaming import TranscriptionSession
+from standard_asr.contract.exceptions import ConfigError, TranscriptionError
+from standard_asr.contract.language import effective_language
+from standard_asr.contract.results import Diagnostic
+from standard_asr.contract.params import ProviderParams
+from standard_asr.runtime.streaming import TranscriptionSession
 
 from ._audio import float32_to_pcm16, wrap_pcm16_wav
 from .backends.base import Backend, BatchRequest, BatchResult, StreamRequest
@@ -376,7 +376,7 @@ class Qwen3ASR(EngineBase):
         else:
             # Decode encoded bytes/path to a float32 mono array at the native rate
             # via the standard loader (it resamples to ``target_sr`` for us).
-            from standard_asr.utils.audio_loader import (
+            from standard_asr.audio.loader import (
                 load_audio_from_bytes,
                 load_audio_from_path,
             )

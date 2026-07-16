@@ -27,7 +27,7 @@ import os
 import sys
 import wave
 
-from standard_asr.audio_format import AudioFormat
+from standard_asr.audio.format import AudioFormat
 
 from std_qwen3_asr import Qwen3ASR17B
 

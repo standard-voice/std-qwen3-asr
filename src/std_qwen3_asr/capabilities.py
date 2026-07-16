@@ -53,7 +53,7 @@ Streaming (``start_transcription``):
 
 from __future__ import annotations
 
-from standard_asr.capabilities import (
+from standard_asr.contract.capabilities import (
     BatchCapabilities,
     DeclaredCapabilities,
     FinalityCap,
