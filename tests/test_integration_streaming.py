@@ -18,6 +18,9 @@ WebSocket and the SSE fallback -- and asserts the Standard ASR event mapping:
 
 from __future__ import annotations
 
+from pathlib import Path
+
+import numpy as np
 import pytest
 from standard_asr import AudioPath, RuntimeParams, SyncSession
 from standard_asr.audio.format import AudioFormat
@@ -175,15 +178,17 @@ async def test_reduce_to_result(pcm16_frames: list[bytes]) -> None:
         await _collect(session)
         result = session.result()
     assert result.text == "abc"
-    # Manual reduce (the canonical 3-line app reduce) reaches the same text.
-    segments: dict[str, str] = {}
+    # Manual reduce (the canonical app reduce) reaches the same text. The core
+    # helper now takes an explicit reading-order list beside the text mapping.
+    order: list[str] = []
+    texts: dict[str, str] = {}
     session2_events = [
         TranscriptionEvent.partial("seg-0", "a"),
         TranscriptionEvent.final("seg-0", "abc"),
     ]
     for ev in session2_events:
-        reduce_event(segments, ev)
-    assert "".join(segments.values()) == "abc"
+        reduce_event(order, texts, ev)
+    assert "".join(texts[segment_id] for segment_id in order) == "abc"
 
 
 def test_sync_bridge(pcm16_frames: list[bytes]) -> None:
@@ -200,6 +205,29 @@ def test_sync_bridge(pcm16_frames: list[bytes]) -> None:
             result = sync.result()
     assert collected == ["x y"]
     assert result.text == "x y"
+
+
+async def test_whole_input_streaming_output_from_wav_path(tmp_path: Path) -> None:
+    # The whole-input *path* decode branch, without the local reference clip:
+    # a synthetic wav goes through the standard loader's path route and the
+    # session uploads the decoded PCM. Keeps the branch covered on machines
+    # that do not have the untracked reference audio.
+    import wave
+
+    wav_path = tmp_path / "tone.wav"
+    samples = (np.sin(np.linspace(0, 440.0, 1600)) * 0.2 * 32767).astype("<i2")
+    with wave.open(str(wav_path), "wb") as writer:
+        writer.setnchannels(1)
+        writer.setsampwidth(2)
+        writer.setframerate(16000)
+        writer.writeframes(samples.tobytes())
+    with running_server(FakeConfig(deltas=["from ", "path"])) as server:
+        engine = Qwen3ASR17B(base_url=server.http_base_url, stream_transport="sse")
+        session = engine.start_transcription(audio=AudioPath(str(wav_path)))
+        events = await _collect(session)
+    finals = [e for e in events if e.type == "final"]
+    assert finals[0].text == "from path"
+    assert server.requests[-1].file_len > 1000
 
 
 @pytest.mark.skipif(not TEST_AUDIO_PATH.exists(), reason="reference test audio not available")
