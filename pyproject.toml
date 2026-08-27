@@ -24,7 +24,10 @@ classifiers = [
 # isolation, spec G.4.2): vLLM is the *remote runtime*, not a local dependency.
 dependencies = [
     # Pinned to GitHub `main` until standard-asr cuts its first PyPI release; swap
-    # to a version specifier (>=0.1.0) at that point.
+    # to a version specifier at that point. MERGE ORDER: this branch implements
+    # the protocol 1.1 artifact lifecycle, which `main` gains only when the core
+    # branch `feat/model-artifact-lifecycle` (0.2.0) lands -- merge the core
+    # first, then repin uv.lock here, or this plugin fails to import.
     "standard-asr @ git+https://github.com/standard-voice/standard_asr.git@main",
     "httpx>=0.27",
     "websockets>=13.0",

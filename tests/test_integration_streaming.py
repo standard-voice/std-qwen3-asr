@@ -179,7 +179,9 @@ async def test_reduce_to_result(pcm16_frames: list[bytes]) -> None:
         result = session.result()
     assert result.text == "abc"
     # Manual reduce (the canonical app reduce) reaches the same text. The core
-    # helper now takes an explicit reading-order list beside the text mapping.
+    # helper takes an explicit reading-order list beside the text mapping, and
+    # the documented display join guards ids spliced by a supersede before
+    # their text arrives.
     order: list[str] = []
     texts: dict[str, str] = {}
     session2_events = [
@@ -188,7 +190,7 @@ async def test_reduce_to_result(pcm16_frames: list[bytes]) -> None:
     ]
     for ev in session2_events:
         reduce_event(order, texts, ev)
-    assert "".join(texts[segment_id] for segment_id in order) == "abc"
+    assert " ".join(texts[sid] for sid in order if sid in texts) == "abc"
 
 
 def test_sync_bridge(pcm16_frames: list[bytes]) -> None:
@@ -215,11 +217,14 @@ async def test_whole_input_streaming_output_from_wav_path(tmp_path: Path) -> Non
     import wave
 
     wav_path = tmp_path / "tone.wav"
+    # 8 kHz on disk: the loader must decode AND resample to the 16 kHz native
+    # rate, so the uploaded byte count (~2x the source PCM) discriminates the
+    # decode path from any regression that uploads the raw file bytes.
     samples = (np.sin(np.linspace(0, 440.0, 1600)) * 0.2 * 32767).astype("<i2")
     with wave.open(str(wav_path), "wb") as writer:
         writer.setnchannels(1)
         writer.setsampwidth(2)
-        writer.setframerate(16000)
+        writer.setframerate(8000)
         writer.writeframes(samples.tobytes())
     with running_server(FakeConfig(deltas=["from ", "path"])) as server:
         engine = Qwen3ASR17B(base_url=server.http_base_url, stream_transport="sse")
@@ -227,7 +232,9 @@ async def test_whole_input_streaming_output_from_wav_path(tmp_path: Path) -> Non
         events = await _collect(session)
     finals = [e for e in events if e.type == "final"]
     assert finals[0].text == "from path"
-    assert server.requests[-1].file_len > 1000
+    # 1600 samples at 8 kHz resample to ~3200 at 16 kHz (~6.4 KB of PCM); the
+    # raw 8 kHz file is only ~3.2 KB, so this bound proves the decode ran.
+    assert server.requests[-1].file_len > 6000
 
 
 @pytest.mark.skipif(not TEST_AUDIO_PATH.exists(), reason="reference test audio not available")
