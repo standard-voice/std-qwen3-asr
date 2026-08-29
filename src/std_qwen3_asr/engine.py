@@ -39,7 +39,7 @@ from standard_asr.contract.language import effective_language
 from standard_asr.contract.params import ProviderParams
 from standard_asr.contract.results import Diagnostic
 from standard_asr.engine import (
-    NO_ARTIFACT_ACQUISITION,
+    NO_ARTIFACT_LIFECYCLE,
     BaseConfig,
     BaseProperties,
     DeclaredEngineMetadata,
@@ -89,11 +89,11 @@ class Qwen3ASR(EngineBase):
     declared_capabilities: ClassVar[DeclaredCapabilities] = QWEN3_ASR_CAPABILITIES
     # DashScope and the separately deployed vLLM service own their artifact
     # lifecycles; this plugin only constructs a client and names a server-side
-    # model, so acquisition is not applicable even for the open-weight presets
-    # and even when vLLM runs on loopback (process proximity does not transfer
-    # lifecycle ownership -- spec, artifact lifecycle chapter).
+    # model, so the artifact lifecycle is not applicable even for the
+    # open-weight presets, even when vLLM runs on loopback (process proximity
+    # does not transfer lifecycle ownership -- spec, artifact lifecycle chapter).
     declared_metadata: ClassVar[DeclaredEngineMetadata] = DeclaredEngineMetadata(
-        artifacts=NO_ARTIFACT_ACQUISITION
+        artifacts=NO_ARTIFACT_LIFECYCLE
     )
     provider_params_type: ClassVar[type[ProviderParams] | None] = Qwen3ASRParams
     config_type: ClassVar[type[BaseConfig[str]] | None] = Qwen3ASRConfig
