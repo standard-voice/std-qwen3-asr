@@ -1,7 +1,7 @@
 # SPDX-FileCopyrightText: 2026 Standard Voice Contributors
 # SPDX-License-Identifier: Apache-2.0
 
-"""Artifact-lifecycle declaration and report behavior (protocol 1.1).
+"""Artifact-lifecycle declaration and report behavior.
 
 Every preset is a client for a separately operated service (DashScope or a
 deployed vLLM server), so the whole engine family declares
@@ -28,7 +28,7 @@ def test_declared_metadata_has_no_artifact_lifecycle(preset: type[Qwen3ASR]) -> 
 
 @pytest.mark.parametrize("preset", PRESETS)
 def test_protocol_version_is_1_1(preset: type[Qwen3ASR]) -> None:
-    assert preset.properties.protocol_version == "1.1.0"
+    assert preset.properties.protocol_version == "0.2.0"
 
 
 def test_artifact_status_reports_not_applicable() -> None:

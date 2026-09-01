@@ -61,7 +61,7 @@ class Qwen3ASRProperties(BaseProperties):
 
     engine_id: str = "qwen3-asr"
     model_name: str = "flash"
-    protocol_version: str = "1.1.0"
+    protocol_version: str = "0.2.0"
     accepted_input: set[InputKind] = {
         InputKind.ENCODED_FILE,
         InputKind.ENCODED_BYTES,
