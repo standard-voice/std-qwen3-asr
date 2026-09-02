@@ -24,7 +24,9 @@ classifiers = [
 # isolation, spec G.4.2): vLLM is the *remote runtime*, not a local dependency.
 dependencies = [
     # Pinned to GitHub `main` until standard-asr cuts its first PyPI release; swap
-    # to a version specifier (>=0.1.0) at that point.
+    # to a version specifier at that point. This plugin needs the protocol 0.2
+    # artifact lifecycle, which `main` carries since standard_asr#69; `uv.lock`
+    # pins the exact revision.
     "standard-asr @ git+https://github.com/standard-voice/standard_asr.git@main",
     "httpx>=0.27",
     "websockets>=13.0",
