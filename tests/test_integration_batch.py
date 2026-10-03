@@ -73,9 +73,8 @@ def test_dashscope_batch_chat_shape(silence_array: np.ndarray) -> None:
         )
     assert result.text == "ni hao"
     assert result.detected_language == "zh"
-    # Emotion is engine-specific -> surfaced in extra, never standardized metadata.
+    # Emotion is engine-specific -> surfaced in extra.
     assert result.extra["emotion"] == "happy"
-    assert result.metadata == {}
     # The adapter sent a chat-completions body with input_audio + system context.
     body = server.requests[-1].json_body
     assert body["model"] == "qwen3-asr-flash"

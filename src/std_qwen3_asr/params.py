@@ -43,8 +43,7 @@ class Qwen3ASRParams(ProviderParams):
             pathological audio); forwarded when set.
         emotion: Request Qwen's per-utterance emotion annotation when the backend
             supports it. The detected emotion (if any) is surfaced in the
-            result's ``extra`` channel (engine-specific, spec TR.1), never in
-            standardized ``metadata``.
+            result's ``extra`` channel (engine-specific, spec TR.1).
     """
 
     enable_itn: bool = Field(

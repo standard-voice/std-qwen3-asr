@@ -240,8 +240,8 @@ def test_streaming_capabilities_declared_honestly() -> None:
     assert caps.supports("streaming_input")
     assert caps.supports("streaming_output")
     assert caps.supports("streaming.emits_partials")
-    # The spec-named stable_until=0 case: word_stability MUST be false.
-    assert not caps.supports("streaming.word_stability")
+    # No partial carries stable text, so partial_stability MUST be unsupported.
+    assert not caps.supports("streaming.partial_stability")
     # Append-only: no supersede.
     assert not caps.supports("streaming.re_segments")
     # No streaming timestamps / honest reconnect.
