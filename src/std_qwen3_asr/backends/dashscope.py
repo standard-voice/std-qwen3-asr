@@ -14,8 +14,8 @@ language + emotion are in ``choices[0].message.annotations[0]``
 
 Streaming: ``stream=true`` yields standard chat-completion SSE delta chunks
 (``choices[0].delta.content`` fragments). This is *token streaming of the
-transcript*, append-only -- mapped to the same ``partial`` accumulation +
-``stable_until=0`` model as the vLLM streaming path.
+transcript*, append-only -- mapped to the same ``partial`` accumulation, with
+``stable_text=""`` on every ``partial``, as the vLLM streaming path.
 
 Reachability note: DashScope is a paid cloud service and requires an API key.
 This backend is implemented and unit-tested against a local fake, but live

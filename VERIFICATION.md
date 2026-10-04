@@ -56,7 +56,7 @@ $ uv run pytest
 ...
 Name    Stmts   Miss Branch BrPart  Cover   Missing
 ---------------------------------------------------
-TOTAL     645      0    168      0   100%
+TOTAL     647      0    168      0   100%
 Required test coverage of 100% reached. Total coverage: 100.00%
 94 passed in 16.81s
 ```
@@ -77,7 +77,8 @@ What the integration tests cover (representative):
 - **Batch / DashScope** — chat-completions body shape (`input_audio` + system
   context), `annotations` -> `detected_language` + `extra["emotion"]`.
 - **Streaming / vLLM Realtime (WebSocket)** — cumulative `partial` accumulation,
-  single `seg-0`, `stable_until=0`, one `final` then `done`, session-param
+  single `seg-0`, `stable_text=""` on every `partial`, one `final` then `done`,
+  no capability mismatch recorded by the session, session-param
   forwarding (`language`/`instructions`/`enable_itn`/`pcm16`), audio bytes
   received, server-abrupt-close handling, server error-event -> `engine_error`.
 - **Streaming / SSE** — vLLM `transcription.chunk` and DashScope chat deltas.
@@ -85,7 +86,8 @@ What the integration tests cover (representative):
   decoded/resampled by the standard layer, streamed.
 - **Compliance** — `check_entrypoints`, `check_streaming_param_gating`,
   `check_provider_params_swap_safety`, `check_sync_bridge`, and
-  `check_event_sequence` on a recorded real stream.
+  `check_event_sequence` on a recorded real stream, given the declared
+  capabilities.
 
 ### 2. Real reference audio through full negotiation
 
@@ -102,14 +104,16 @@ file on this machine. The transcript text returned is the mock's scripted value
 
 ```
 $ uv run standard-asr list
+Discovered models:
  - qwen3-asr/0.6b   engine=qwen3-asr  model=0.6b
  - qwen3-asr/1.7b   engine=qwen3-asr  model=1.7b
  - qwen3-asr/flash  engine=qwen3-asr  model=flash
 
 $ uv run standard-asr compliance run qwen3-asr/1.7b
 [OK] Entry point compliance checks passed.
-[INFO] Streaming event-sequence is not run here; cover it with
-       standard_asr.compliance.check_event_sequence in your tests ...
+[INFO] Two checks are not run here (each needs recorded data the CLI cannot
+       synthesize): check_event_sequence for a streaming engine's event
+       stream, and check_transcription_result for a batch result. ...
 [OK] Compliance run passed.
 ```
 
@@ -122,6 +126,8 @@ Installed plugins:
   - qwen3-asr/0.6b [std-qwen3-asr] numpy None
   - qwen3-asr/1.7b [std-qwen3-asr] numpy None
   - qwen3-asr/flash [std-qwen3-asr] numpy None
+  core: [standard-asr] numpy >=1.26
+
 No dependency conflicts detected.
 ```
 
@@ -130,18 +136,19 @@ No dependency conflicts detected.
 ```
 $ uv run python examples/stream_against_mock.py
 --- streaming events ---
-partial  seg=seg-0 stable_until=0 text='Hello from Qwen3-'
-partial  seg=seg-0 stable_until=0 text='Hello from Qwen3-ASR '
-partial  seg=seg-0 stable_until=0 text='Hello from Qwen3-ASR streaming.'
-final    seg=seg-0 stable_until=0 text='Hello from Qwen3-ASR streaming.'
+partial  seg=seg-0 stable_text='' text='Hello from Qwen3-'
+partial  seg=seg-0 stable_text='' text='Hello from Qwen3-ASR '
+partial  seg=seg-0 stable_text='' text='Hello from Qwen3-ASR streaming.'
+final    seg=seg-0 stable_text='Hello from Qwen3-ASR streaming.' text='Hello from Qwen3-ASR streaming.'
 done     type='done' ...
 --- reduced result ---
 'Hello from Qwen3-ASR streaming.'
 ```
 
 This is the exact Standard ASR event mapping the adapter produces: cumulative
-`partial` text (not deltas), one deterministic `seg-0`, `stable_until=0`
-throughout, a single `final`, then the base-appended `done`, and a reduced
+`partial` text (not deltas), one deterministic `seg-0`, `stable_text=""` on
+every `partial`, a single `final` whose `stable_text` is its whole text, then
+the base-appended `done`, and a reduced
 result equal to the concatenated stream. (Some intermediate partials may be
 coalesced by the standard layer's backpressure rule — expected, spec §6.4.)
 
@@ -230,7 +237,7 @@ but with real Qwen3-ASR output.
   This does not change the adapter's event mapping (we emit one `seg-0` stream),
   but it bounds latency/segmentation server-side.
 - **Streaming returns no timestamps** (Qwen3-ASR). The adapter declares
-  `streaming.timestamps = none` and `word_stability = false` accordingly.
+  `streaming.timestamps = none` and `partial_stability = false` accordingly.
 
 ---
 

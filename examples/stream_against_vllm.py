@@ -72,7 +72,7 @@ async def main(path: str) -> None:
     async with session:
         async for event in session:
             if event.type in ("partial", "final"):
-                print(f"{event.type:8} stable_until={event.stable_until} {event.text!r}")
+                print(f"{event.type:8} stable_text={event.stable_text!r} {event.text!r}")
             elif event.type == "error":
                 print(f"ERROR code={event.code} recoverable={event.recoverable}")
     print("final transcript:", repr(session.result().text))

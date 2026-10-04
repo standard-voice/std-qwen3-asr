@@ -19,11 +19,13 @@ Event mapping (the design rationale -- see ``docs/STANDARD_ASR_FINDINGS.md``):
 * **One deterministic segment** ``seg-0`` (spec §3.4): the backend gives no
   segment ids and the stream is one continuous text flow, so a fixed id makes the
   id sequence reproducible across runs of the same audio.
-* **``stable_until=0`` on every event.** The streaming wire carries no per-token
-  timestamps or right-context, so we cannot honestly freeze any prefix. Spec
-  ST §4.2 names exactly this case ("Qwen3-ASR streaming ... MUST report
-  stable_until=0; word_stability MUST be declared false"). We declare
-  ``word_stability=false`` in capabilities to match.
+* **No stable text on a ``partial``.** The streaming wire carries no per-token
+  timestamps or right-context, so we cannot promise that any part of a
+  ``partial`` stays unchanged. Each ``partial`` keeps ``stable_text`` at its
+  default ``""``, and the capabilities declare ``partial_stability``
+  unsupported (spec ST §4.2: an engine that cannot promise stable text on any
+  ``partial`` MUST declare it unsupported). The ``final`` leaves
+  ``stable_text`` out too: on a ``final`` it is always the whole text.
 * **``audio_processed_until`` is omitted** -- the backend reports no audio cursor,
   and the spec forbids fabricating one (§4.4: "MUST NOT carry a fabricated
   audio_processed_until ... no reliable cursor => omit the field"). The base's
@@ -121,11 +123,11 @@ class Qwen3ASRSession(TranscriptionSession):
                 # synthesize a progress heartbeat with a fabricated cursor.)
                 continue
             cumulative += delta.text
+            # No right-context / timestamps on the wire => no stable text, so
+            # ``stable_text`` keeps its default ``""``.
             yield TranscriptionEvent.partial(
                 _SEGMENT_ID,
                 cumulative,
-                # No right-context / timestamps on the wire => no frozen prefix.
-                stable_until=0,
                 **_lang_kwargs(detected_language),
             )
 
@@ -135,7 +137,6 @@ class Qwen3ASRSession(TranscriptionSession):
         yield TranscriptionEvent.final(
             _SEGMENT_ID,
             cumulative,
-            stable_until=0,
             **_lang_kwargs(detected_language),
         )
 

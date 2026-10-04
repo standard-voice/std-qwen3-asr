@@ -25,9 +25,9 @@ Wire surfaces used:
       ``finish_reason="stop"`` chunk.
 
 Both streaming transports are append-only token streams -- the deltas only grow
-the transcript -- which is why the adapter declares ``word_stability=false`` and
-reports ``stable_until=0`` (spec ST §4.2; Qwen3-ASR streaming is the spec's named
-example).
+the transcript. They carry no per-token timestamps or right-context, so the
+adapter declares ``partial_stability`` unsupported and sends every ``partial``
+with ``stable_text=""`` (spec ST §4.2).
 """
 
 from __future__ import annotations

@@ -60,7 +60,7 @@ async def main() -> None:
                 if event.type in ("partial", "final"):
                     print(
                         f"{event.type:8} seg={event.segment_id} "
-                        f"stable_until={event.stable_until} text={event.text!r}"
+                        f"stable_text={event.stable_text!r} text={event.text!r}"
                     )
                 else:
                     print(f"{event.type:8} {event}")

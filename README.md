@@ -119,11 +119,12 @@ for the full rationale):
 - Qwen3-ASR streams **append-only token deltas**. The adapter accumulates them
   into cumulative `partial` text (Standard ASR requires cumulative/replace, never
   deltas on the wire) and emits one `final` at the end.
-- **`stable_until` is always `0`** and `word_stability` is declared `false`: the
-  stream carries no per-token timestamps or right-context, so no prefix can
-  honestly be frozen. (The Standard ASR spec names Qwen3-ASR streaming as exactly
-  this case.) Simple subtitle apps ignore `stable_until` anyway; voice-assistant
-  apps must not expect a stable prefix from this engine.
+- **Every `partial` carries `stable_text=""`**, and `partial_stability` is
+  declared `false`. The stream carries no per-token timestamps or right-context,
+  so the adapter cannot promise that any part of a `partial` stays unchanged.
+  The `final` carries its whole text as `stable_text`, as every `final` does.
+  Simple subtitle apps ignore `stable_text` anyway. Voice-assistant apps must not
+  expect stable text from this engine before the `final`.
 
 ### Hosted DashScope (Qwen3-ASR-Flash)
 

@@ -37,11 +37,12 @@ Streaming (``start_transcription``):
   cumulative ``partial`` per spec §4.3).
 * ``re_segments`` -- no. vLLM token streaming is append-only; we never retract
   or merge/split a finalized segment, so we never emit ``supersede``.
-* ``word_stability`` -- **false**. The streaming wire carries no per-token
-  timestamps or right-context, so we report ``stable_until=0`` for every event.
-  The spec names Qwen3-ASR streaming as the canonical case for this (ST §4.2):
-  "engines with no right_context or timestamp info (e.g. Qwen3-ASR streaming)
-  MUST report stable_until=0; word_stability MUST be declared false."
+* ``partial_stability`` -- **false**. The streaming wire carries no per-token
+  timestamps or right-context, so we cannot promise that any part of a
+  ``partial`` stays unchanged, and every ``partial`` carries
+  ``stable_text=""``. The spec requires this declaration (ST §4.2): an engine
+  that cannot promise stable text on any ``partial`` MUST declare
+  ``partial_stability`` unsupported.
 * ``reconnect`` -- ``unsupported``. The vLLM Realtime endpoint is stateful with
   hardcoded segmentation and offers no loss-free resume contract; we declare
   ``unsupported`` rather than over-promise ``seamless``/``lossy``.
@@ -100,7 +101,7 @@ QWEN3_ASR_CAPABILITIES = DeclaredCapabilities(
         ),
         emits_partials=FlagCap(supported=True),
         re_segments=FlagCap(supported=False),
-        word_stability=FlagCap(supported=False),
+        partial_stability=FlagCap(supported=False),
         reconnect=ReconnectCap(mode="unsupported"),
         finality_level=FinalityCap(mode="final"),
         # timestamps defaults to mode="none" -- no streaming timestamps.

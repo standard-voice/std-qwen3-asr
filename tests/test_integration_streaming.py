@@ -9,10 +9,13 @@ WebSocket and the SSE fallback -- and asserts the Standard ASR event mapping:
 
 * cumulative/replace ``text`` accumulation from append-only deltas (spec §4.3),
 * a single deterministic ``seg-0`` segment (spec §3.4),
-* ``stable_until=0`` on every event (spec ST §4.2: Qwen3-ASR streaming is the
-  named case -- no right-context/timestamps => no frozen prefix),
+* ``stable_text=""`` on every ``partial`` and the whole text on the ``final``
+  (spec ST §4.2: no right-context/timestamps => no stable text on a ``partial``),
 * one ``final`` then the base-appended ``done``,
-* correct event sequence per the compliance event-sequence checker,
+* correct event sequence per the compliance event-sequence checker, given the
+  declared capabilities,
+* no capability mismatch recorded by the session, which checks every event
+  against the engine's effective streaming capabilities,
 * the sync bridge, the whole-input path, and error wrapping.
 """
 
@@ -22,22 +25,43 @@ import pytest
 from standard_asr import AudioPath, RuntimeParams, SyncSession
 from standard_asr.audio.format import AudioFormat
 from standard_asr.compliance import check_event_sequence
-from standard_asr.runtime.streaming import TranscriptionEvent, TranscriptionSession, reduce_event
+from standard_asr.runtime.streaming import (
+    CAPABILITY_DIAGNOSTIC_CODES,
+    DIAG_STABLE_TEXT_ABANDONED,
+    TranscriptionEvent,
+    TranscriptionSession,
+    reduce_event,
+)
 
-from std_qwen3_asr import Qwen3ASR, Qwen3ASR17B, Qwen3ASRParams
+from std_qwen3_asr import QWEN3_ASR_CAPABILITIES, Qwen3ASR, Qwen3ASR17B, Qwen3ASRParams
 
 from .conftest import TEST_AUDIO_PATH
 from .fake_server import FakeConfig, running_server
 
 PCM_FORMAT = AudioFormat(encoding="pcm_s16le", sample_rate=16000, channels=1)
 
+#: Diagnostic codes that mean the events broke what the engine declares: a
+#: capability mismatch, or a segment with stable text left open at ``done``.
+_DECLARATION_MISMATCH_CODES = CAPABILITY_DIAGNOSTIC_CODES | {DIAG_STABLE_TEXT_ABANDONED}
+
+
+def _assert_no_declaration_mismatch(codes: set[str]) -> None:
+    """Assert that the session recorded no capability or stable-text mismatch."""
+    assert not codes & _DECLARATION_MISMATCH_CODES, sorted(codes)
+
 
 async def _collect(session: TranscriptionSession) -> list[TranscriptionEvent]:
-    """Drive a session to completion and collect all emitted events."""
+    """Drive a session to completion and collect all emitted events.
+
+    The engine's ``start_transcription`` binds its effective streaming
+    capabilities to the session, so the session checks every event against
+    them; this helper asserts that it recorded no mismatch.
+    """
     events: list[TranscriptionEvent] = []
     async with session:
         async for event in session:
             events.append(event)
+    _assert_no_declaration_mismatch({d.code for d in session.diagnostics()})
     return events
 
 
@@ -79,8 +103,9 @@ async def test_realtime_event_mapping(pcm16_frames: list[bytes]) -> None:
         assert "the quick brown fox".startswith(t)  # each is a prefix of the whole
     # One deterministic segment.
     assert {e.segment_id for e in partials + finals} == {"seg-0"}
-    # stable_until=0 everywhere (spec ST §4.2, Qwen3-ASR streaming named case).
-    assert all(e.stable_until == 0 for e in partials + finals)
+    # No stable text on a partial (spec ST §4.2); a final is always wholly stable.
+    assert all(e.stable_text == "" for e in partials)
+    assert all(e.stable_text == e.text for e in finals)
     # The final carries the complete transcript.
     assert finals[0].text == "the quick brown fox"
 
@@ -113,7 +138,7 @@ async def test_realtime_event_sequence_is_compliant(pcm16_frames: list[bytes]) -
     with running_server() as server:
         engine = Qwen3ASR17B(base_url=server.realtime_base_url, stream_transport="realtime")
         events = await _run_stream(engine, pcm16_frames)
-    report = check_event_sequence(events)
+    report = check_event_sequence(events, capabilities=QWEN3_ASR_CAPABILITIES)
     assert report.passed, [i.message for i in report.issues]
 
 
@@ -145,7 +170,8 @@ async def test_sse_event_mapping(pcm16_frames: list[bytes]) -> None:
     for t in texts:
         assert "hello world".startswith(t)
     assert finals[0].text == "hello world"
-    assert all(e.stable_until == 0 for e in partials + finals)
+    assert all(e.stable_text == "" for e in partials)
+    assert all(e.stable_text == e.text for e in finals)
     assert events[-1].type == "done"
     # SSE collected the frames and uploaded them as one request.
     assert any(r.path == "/v1/audio/transcriptions" for r in server.requests)
@@ -175,15 +201,16 @@ async def test_reduce_to_result(pcm16_frames: list[bytes]) -> None:
         await _collect(session)
         result = session.result()
     assert result.text == "abc"
-    # Manual reduce (the canonical 3-line app reduce) reaches the same text.
-    segments: dict[str, str] = {}
+    # Manual reduce (the canonical app reduce) reaches the same text.
+    order: list[str] = []
+    texts: dict[str, str] = {}
     session2_events = [
         TranscriptionEvent.partial("seg-0", "a"),
         TranscriptionEvent.final("seg-0", "abc"),
     ]
     for ev in session2_events:
-        reduce_event(segments, ev)
-    assert "".join(segments.values()) == "abc"
+        reduce_event(order, texts, ev)
+    assert "".join(texts[sid] for sid in order) == "abc"
 
 
 def test_sync_bridge(pcm16_frames: list[bytes]) -> None:
@@ -198,7 +225,9 @@ def test_sync_bridge(pcm16_frames: list[bytes]) -> None:
                 if event.type == "final":
                     collected.append(event.text or "")
             result = sync.result()
+            diagnostic_codes = {d.code for d in sync.diagnostics()}
     assert collected == ["x y"]
+    _assert_no_declaration_mismatch(diagnostic_codes)
     assert result.text == "x y"
 
 

@@ -35,8 +35,10 @@ from standard_asr import (
 from standard_asr.audio.format import AudioFormat
 from standard_asr.contract.capabilities import DeclaredCapabilities
 from standard_asr.engine import (
+    NO_ARTIFACT_LIFECYCLE,
     BaseConfig,
     BaseProperties,
+    DeclaredEngineMetadata,
     EngineBase,
     PreparedAudio,
 )
@@ -85,6 +87,13 @@ class Qwen3ASR(EngineBase):
 
     properties: ClassVar[BaseProperties] = Qwen3ASRProperties()
     declared_capabilities: ClassVar[DeclaredCapabilities] = QWEN3_ASR_CAPABILITIES
+    #: No inference-artifact lifecycle: the model weights belong to the remote
+    #: vLLM server or the DashScope service, which this engine only calls. The
+    #: engine never downloads, inspects, or provides them (spec, inference
+    #: artifact lifecycle §1).
+    declared_metadata: ClassVar[DeclaredEngineMetadata] = DeclaredEngineMetadata(
+        artifacts=NO_ARTIFACT_LIFECYCLE,
+    )
     provider_params_type: ClassVar[type[ProviderParams] | None] = Qwen3ASRParams
     config_type: ClassVar[type[BaseConfig[str]] | None] = Qwen3ASRConfig
 
@@ -405,7 +414,7 @@ def _to_result(result: BatchResult) -> TranscriptionResult:
 
     Returns:
         The Standard ASR result, with engine-specific fields (emotion, raw) in
-        ``extra`` (never in standardized ``metadata``; spec TR.1).
+        ``extra`` (spec TR.1).
     """
     extra: dict[str, Any] = dict(result.raw)
     if result.emotion:

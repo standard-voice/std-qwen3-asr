@@ -13,6 +13,26 @@ mapped onto Qwen3-ASR's append-only token stream cleanly, and the spec even name
 Qwen3-ASR streaming as the canonical `stable_until=0` case. The findings below are
 mostly papercuts and HTTP/streaming-backend ergonomics, not design flaws.
 
+> **Note on later library changes.** This report records the library as it was
+> when the plugin was first built, and keeps the names of that time. Standard
+> ASR has since changed the parts that A4 and the closing notes discuss:
+>
+> - The count `stable_until` is replaced by the string `stable_text`. A
+>   `partial` from this plugin now carries `stable_text=""`, and the `final`
+>   carries its whole text.
+> - The capability `streaming.word_stability` is renamed
+>   `streaming.partial_stability`.
+> - The specification no longer names Qwen3-ASR streaming as the example for
+>   this rule. The rule is general: an engine that cannot promise stable text
+>   on any `partial` MUST declare `partial_stability` unsupported (streaming
+>   §4.2).
+> - Suggestion (b) of A4 now exists in part. The session checks every event
+>   against the engine's streaming capabilities while it runs, and so does
+>   `check_event_sequence` when it is given the capabilities. A `partial` with
+>   stable text under unsupported `partial_stability` is reported, and so is an
+>   `audio_processed_until` cursor under `streaming.timestamps` mode `none`. The
+>   check does not look at the `start` and `end` fields of an event.
+
 Severity legend: **[blocker]** stopped progress until worked around ·
 **[papercut]** cost time / confusion · **[enhancement]** would help future
 HTTP/streaming adapters.
