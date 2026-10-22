@@ -64,6 +64,7 @@ from standard_asr.contract.capabilities import (
     PromptCap,
     PromptConstraints,
     ReconnectCap,
+    RuntimeOverrideCap,
     StreamingCapabilities,
     StreamingGuidanceCaps,
 )
@@ -83,7 +84,7 @@ QWEN3_ASR_CAPABILITIES = DeclaredCapabilities(
     streaming_input=FlagCap(supported=True),
     streaming_output=FlagCap(supported=True),
     batch=BatchCapabilities(
-        language=LanguageCaps(runtime_override=FlagCap(supported=True)),
+        language=LanguageCaps(runtime_override=RuntimeOverrideCap(supported=True)),
         guidance=GuidanceCaps(
             prompt=PromptCap(
                 supported=True,
@@ -92,7 +93,7 @@ QWEN3_ASR_CAPABILITIES = DeclaredCapabilities(
         ),
     ),
     streaming=StreamingCapabilities(
-        language=LanguageCaps(runtime_override=FlagCap(supported=True)),
+        language=LanguageCaps(runtime_override=RuntimeOverrideCap(supported=True)),
         guidance=StreamingGuidanceCaps(
             prompt=PromptCap(
                 supported=True,
