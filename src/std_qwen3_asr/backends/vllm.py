@@ -130,7 +130,6 @@ class VLLMBackend:
             write=read_timeout,
             pool=connect_timeout,
         )
-        self._client: httpx.AsyncClient | None = None
 
     def _headers(self) -> dict[str, str]:
         """Build request headers, including auth when an API key is set.
@@ -143,15 +142,18 @@ class VLLMBackend:
             headers["Authorization"] = f"Bearer {self._api_key}"
         return headers
 
-    def _http(self) -> httpx.AsyncClient:
-        """Return the lazily-created pooled HTTP client.
+    def _new_client(self) -> httpx.AsyncClient:
+        """Return a new HTTP client for one call, which the call closes.
+
+        No client outlives its call. An ``httpx.AsyncClient`` is bound to the
+        event loop it first runs on, and one engine instance serves calls on
+        different event loops, one after another (standard-asr protocol
+        IC.12): a client kept from one call would fail in the next.
 
         Returns:
-            The shared :class:`httpx.AsyncClient`.
+            A new :class:`httpx.AsyncClient`.
         """
-        if self._client is None:
-            self._client = httpx.AsyncClient(timeout=self._timeout, verify=self._verify_tls)
-        return self._client
+        return httpx.AsyncClient(timeout=self._timeout, verify=self._verify_tls)
 
     async def transcribe(self, request: BatchRequest) -> BatchResult:
         """Transcribe via the multipart ``/audio/transcriptions`` endpoint.
@@ -184,12 +186,13 @@ class VLLMBackend:
             data["vllm_xargs"] = json.dumps({"enable_itn": True})
 
         files = {"file": (filename, request.audio, mime)}
-        response = await self._http().post(
-            f"{self._base_url}/audio/transcriptions",
-            headers=self._headers(),
-            data=data,
-            files=files,
-        )
+        async with self._new_client() as client:
+            response = await client.post(
+                f"{self._base_url}/audio/transcriptions",
+                headers=self._headers(),
+                data=data,
+                files=files,
+            )
         response.raise_for_status()
         payload: dict[str, Any] = response.json()
         return _parse_transcription_json(payload)
@@ -313,24 +316,21 @@ class VLLMBackend:
             data["vllm_xargs"] = json.dumps({"enable_itn": True})
         files = {"file": ("audio.wav", wav, "audio/wav")}
 
-        async with self._http().stream(
-            "POST",
-            f"{self._base_url}/audio/transcriptions",
-            headers=self._headers(),
-            data=data,
-            files=files,
-        ) as response:
+        async with (
+            self._new_client() as client,
+            client.stream(
+                "POST",
+                f"{self._base_url}/audio/transcriptions",
+                headers=self._headers(),
+                data=data,
+                files=files,
+            ) as response,
+        ):
             response.raise_for_status()
             async for line in response.aiter_lines():
                 delta = _parse_sse_line(line)
                 if delta is not None:
                     yield delta
-
-    async def aclose(self) -> None:
-        """Close the pooled HTTP client."""
-        if self._client is not None:
-            await self._client.aclose()
-            self._client = None
 
 
 def _realtime_session_update(request: StreamRequest, model: str) -> dict[str, Any]:

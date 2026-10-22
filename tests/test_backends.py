@@ -12,6 +12,7 @@ list-form content + annotations, and the missing-api-key guard.
 from __future__ import annotations
 
 import asyncio
+from collections.abc import AsyncIterator
 
 import pytest
 
@@ -110,7 +111,6 @@ def test_vllm_sse_forwards_language_prompt_itn() -> None:
                 _src(),
             ):
                 out.append(d.text)
-            await backend.aclose()
             return out
 
         deltas = asyncio.run(_go())
@@ -182,21 +182,10 @@ def test_parse_chat_sse_line() -> None:
 # --------------------------------------------------------------------------- #
 # DashScope backend behavior
 # --------------------------------------------------------------------------- #
-def test_dashscope_aclose_without_client_is_noop() -> None:
-    # aclose() before any request created a client must be a safe no-op.
-    backend = DashScopeBackend(
-        base_url="https://x/v1",
-        model="m",
-        api_key="k",
-        connect_timeout=1.0,
-        read_timeout=1.0,
-        verify_tls=True,
-    )
-    asyncio.run(backend.aclose())  # no client yet -> no-op
-
-
-def test_dashscope_client_reused() -> None:
-    with running_server() as server:
+def test_dashscope_serves_calls_on_different_event_loops() -> None:
+    # One backend serves calls one after another on different event loops
+    # (standard-asr protocol IC.12), so no client outlives the call that made it.
+    with running_server(FakeConfig(transcript="again")) as server:
         backend = DashScopeBackend(
             base_url=server.http_base_url,
             model="m",
@@ -205,15 +194,9 @@ def test_dashscope_client_reused() -> None:
             read_timeout=2.0,
             verify_tls=False,
         )
-
-        async def _go() -> None:
-            await backend.transcribe(_batch_request())
-            c1 = backend._client  # pyright: ignore[reportPrivateUsage]
-            await backend.transcribe(_batch_request())
-            assert backend._client is c1  # pyright: ignore[reportPrivateUsage]
-            await backend.aclose()
-
-        asyncio.run(_go())
+        first = asyncio.run(backend.transcribe(_batch_request()))
+        second = asyncio.run(backend.transcribe(_batch_request()))
+    assert first.text == second.text == "again"
 
 
 def test_dashscope_missing_api_key_raises() -> None:
@@ -248,7 +231,6 @@ def test_dashscope_forwards_sampling_params() -> None:
             await backend.transcribe(
                 _batch_request(top_p=0.5, max_completion_tokens=128, language="en", enable_itn=True)
             )
-            await backend.aclose()
 
         asyncio.run(_go())
     body = server.requests[-1].json_body
@@ -261,30 +243,33 @@ def test_dashscope_forwards_sampling_params() -> None:
 # --------------------------------------------------------------------------- #
 # vLLM backend behavior
 # --------------------------------------------------------------------------- #
-def test_vllm_client_is_reused_across_calls() -> None:
-    # Two transcribe calls on the same backend (no aclose between) must reuse the
-    # pooled httpx client (covers the "client already exists" branch).
-    with running_server(FakeConfig(transcript="reuse")) as server:
+def test_vllm_serves_a_stream_then_a_batch_call_on_another_event_loop() -> None:
+    # A stream used to leave its client bound to the stream's event loop, and
+    # the next batch call, on a new loop, took that client and failed.
+    with running_server(FakeConfig(transcript="again")) as server:
         backend = VLLMBackend(
             base_url=server.http_base_url,
             model="m",
             api_key=None,
             connect_timeout=2.0,
             read_timeout=2.0,
-            stream_transport="realtime",
+            stream_transport="sse",
             verify_tls=True,
         )
 
-        async def _go() -> None:
-            r1 = await backend.transcribe(_batch_request())
-            client1 = backend._client  # pyright: ignore[reportPrivateUsage]
-            r2 = await backend.transcribe(_batch_request())
-            client2 = backend._client  # pyright: ignore[reportPrivateUsage]
-            assert r1.text == r2.text == "reuse"
-            assert client1 is client2  # same pooled client
-            await backend.aclose()
+        async def _source() -> AsyncIterator[bytes]:
+            yield b"\x00\x00" * 100
 
-        asyncio.run(_go())
+        async def _stream() -> list[str]:
+            request = StreamRequest(
+                language="en", prompt=None, temperature=0.0, sample_rate=16000, enable_itn=False
+            )
+            return [delta.text async for delta in backend.stream(request, _source())]
+
+        deltas = asyncio.run(_stream())
+        result = asyncio.run(backend.transcribe(_batch_request()))
+    assert deltas
+    assert result.text == "again"
 
 
 def test_vllm_forwards_sampling_params() -> None:
@@ -303,7 +288,6 @@ def test_vllm_forwards_sampling_params() -> None:
             await backend.transcribe(
                 _batch_request(top_p=0.8, max_completion_tokens=64, language="en", prompt="p")
             )
-            await backend.aclose()
 
         asyncio.run(_go())
     form = server.requests[-1].form
@@ -396,7 +380,6 @@ def test_vllm_realtime_server_closes_without_done() -> None:
             _src(),
         ):
             out.append(d.text)
-        await backend.aclose()
         return out
 
     try:
@@ -450,7 +433,6 @@ def test_vllm_realtime_error_event_propagates() -> None:
                 _src(),
             ):
                 pass
-        await backend.aclose()
 
     try:
         asyncio.run(_go())

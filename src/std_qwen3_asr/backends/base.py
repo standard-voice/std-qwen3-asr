@@ -157,7 +157,3 @@ class Backend(Protocol):
             An async iterator of incremental transcript deltas.
         """
         ...
-
-    async def aclose(self) -> None:
-        """Release any pooled transport resources."""
-        ...

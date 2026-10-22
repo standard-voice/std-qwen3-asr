@@ -435,11 +435,9 @@ def _run_batch(backend: Backend, request: BatchRequest) -> BatchResult:
     The batch path is synchronous (``transcribe``), but the backend client is
     async-first. We must not touch an ambient running loop (the sync-bridge
     contract, ST §6.5, and general safety), so we run on a fresh event loop owned
-    by this call. The backend's HTTP client is bound to that loop, so we close it
-    *inside* the same loop before tearing the loop down -- otherwise its sockets
-    would outlive the loop and leak (a ResourceWarning). The backend recreates a
-    fresh client on the next call. ``transcribe_async`` (from the base) gives true
-    async callers a non-blocking path that reuses the caller's loop instead.
+    by this call. Each backend call creates and closes its own HTTP client, so
+    nothing bound to this loop outlives it. ``transcribe_async`` (from the base)
+    gives true async callers a non-blocking path on the caller's loop instead.
 
     Args:
         backend: The active backend.
@@ -451,10 +449,7 @@ def _run_batch(backend: Backend, request: BatchRequest) -> BatchResult:
     import asyncio
 
     async def _run() -> BatchResult:
-        try:
-            return await backend.transcribe(request)
-        finally:
-            await backend.aclose()
+        return await backend.transcribe(request)
 
     loop = asyncio.new_event_loop()
     try:
