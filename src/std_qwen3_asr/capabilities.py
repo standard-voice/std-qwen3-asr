@@ -58,15 +58,15 @@ from standard_asr.contract.capabilities import (
     BatchCapabilities,
     Capabilities,
     FinalityCapability,
-    TraitFlagCapability,
     GuidanceCapabilities,
     LanguageCapabilities,
+    LanguageOverrideCapability,
     PromptCapability,
     PromptConstraints,
     ReconnectCapability,
-    LanguageOverrideCapability,
     StreamingCapabilities,
     StreamingGuidanceCapabilities,
+    TraitFlagCapability,
 )
 
 #: Conservative prompt/context token budget. Qwen documents ~10,000 tokens for
