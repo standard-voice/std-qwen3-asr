@@ -56,17 +56,17 @@ from __future__ import annotations
 
 from standard_asr.contract.capabilities import (
     BatchCapabilities,
-    DeclaredCapabilities,
-    FinalityCap,
-    FlagCap,
-    GuidanceCaps,
-    LanguageCaps,
-    PromptCap,
+    Capabilities,
+    FinalityCapability,
+    TraitFlagCapability,
+    GuidanceCapabilities,
+    LanguageCapabilities,
+    PromptCapability,
     PromptConstraints,
-    ReconnectCap,
-    RuntimeOverrideCap,
+    ReconnectCapability,
+    LanguageOverrideCapability,
     StreamingCapabilities,
-    StreamingGuidanceCaps,
+    StreamingGuidanceCapabilities,
 )
 
 #: Conservative prompt/context token budget. Qwen documents ~10,000 tokens for
@@ -75,36 +75,36 @@ from standard_asr.contract.capabilities import (
 #: §3.3 max_tokens guidance).
 _PROMPT_MAX_TOKENS = 2000
 
-QWEN3_ASR_CAPABILITIES = DeclaredCapabilities(
+QWEN3_ASR_CAPABILITIES = Capabilities(
     # Top-level orthogonal streaming axes (siblings of the batch/streaming
     # subtrees, spec ST §3.2). BOTH are genuinely true: the vLLM Realtime path
     # ingests audio incrementally (streaming_input) AND emits transcript deltas
     # before all input is consumed (streaming_output). Default is False
     # (fail-closed), so they MUST be set explicitly.
-    streaming_input=FlagCap(supported=True),
-    streaming_output=FlagCap(supported=True),
+    streaming_input=TraitFlagCapability(supported=True),
+    streaming_output=TraitFlagCapability(supported=True),
     batch=BatchCapabilities(
-        language=LanguageCaps(runtime_override=RuntimeOverrideCap(supported=True)),
-        guidance=GuidanceCaps(
-            prompt=PromptCap(
+        language=LanguageCapabilities(runtime_override=LanguageOverrideCapability(supported=True)),
+        guidance=GuidanceCapabilities(
+            prompt=PromptCapability(
                 supported=True,
                 constraints=PromptConstraints(max_tokens=_PROMPT_MAX_TOKENS),
             ),
         ),
     ),
     streaming=StreamingCapabilities(
-        language=LanguageCaps(runtime_override=RuntimeOverrideCap(supported=True)),
-        guidance=StreamingGuidanceCaps(
-            prompt=PromptCap(
+        language=LanguageCapabilities(runtime_override=LanguageOverrideCapability(supported=True)),
+        guidance=StreamingGuidanceCapabilities(
+            prompt=PromptCapability(
                 supported=True,
                 constraints=PromptConstraints(max_tokens=_PROMPT_MAX_TOKENS),
             ),
         ),
-        emits_partials=FlagCap(supported=True),
-        re_segments=FlagCap(supported=False),
-        partial_stability=FlagCap(supported=False),
-        reconnect=ReconnectCap(mode="unsupported"),
-        finality_level=FinalityCap(mode="final"),
+        emits_partials=TraitFlagCapability(supported=True),
+        re_segments=TraitFlagCapability(supported=False),
+        partial_stability=TraitFlagCapability(supported=False),
+        reconnect=ReconnectCapability(mode="unsupported"),
+        finality_level=FinalityCapability(mode="final"),
         # timestamps defaults to mode="none" -- no streaming timestamps.
     ),
 )
