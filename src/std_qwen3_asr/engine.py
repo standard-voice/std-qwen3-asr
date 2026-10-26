@@ -33,7 +33,11 @@ from standard_asr import (
     TranscriptionResult,
 )
 from standard_asr.audio.format import AudioFormat
-from standard_asr.contract.capabilities import DeclaredCapabilities
+from standard_asr.contract.capabilities import Capabilities
+from standard_asr.contract.exceptions import ConfigError, TranscriptionError
+from standard_asr.contract.language import effective_language
+from standard_asr.contract.params import ProviderParams
+from standard_asr.contract.results import Diagnostic
 from standard_asr.engine import (
     NO_ARTIFACT_LIFECYCLE,
     BaseConfig,
@@ -42,10 +46,6 @@ from standard_asr.engine import (
     EngineBase,
     PreparedAudio,
 )
-from standard_asr.contract.exceptions import ConfigError, TranscriptionError
-from standard_asr.contract.language import effective_language
-from standard_asr.contract.results import Diagnostic
-from standard_asr.contract.params import ProviderParams
 from standard_asr.runtime.streaming import TranscriptionSession
 
 from ._audio import float32_to_pcm16, wrap_pcm16_wav
@@ -86,7 +86,7 @@ class Qwen3ASR(EngineBase):
     default_backend: ClassVar[str] = "dashscope"
 
     properties: ClassVar[BaseProperties] = Qwen3ASRProperties()
-    declared_capabilities: ClassVar[DeclaredCapabilities] = QWEN3_ASR_CAPABILITIES
+    declared_capabilities: ClassVar[Capabilities] = QWEN3_ASR_CAPABILITIES
     #: No inference-artifact lifecycle: the model weights belong to the remote
     #: vLLM server or the DashScope service, which this engine only calls. The
     #: engine never downloads, inspects, or provides them (spec, inference
