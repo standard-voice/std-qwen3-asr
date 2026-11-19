@@ -141,9 +141,6 @@ class _ScriptedBackend:
         for d in self._deltas:
             yield d
 
-    async def aclose(self) -> None:  # pragma: no cover - nothing to close
-        return None
-
 
 async def test_session_maps_language_and_skips_empty_delta() -> None:
     backend = _ScriptedBackend(

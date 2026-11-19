@@ -136,7 +136,6 @@ class DashScopeBackend:
             write=read_timeout,
             pool=connect_timeout,
         )
-        self._client: httpx.AsyncClient | None = None
 
     def _headers(self) -> dict[str, str]:
         """Build request headers with bearer auth.
@@ -157,15 +156,18 @@ class DashScopeBackend:
             "Content-Type": "application/json",
         }
 
-    def _http(self) -> httpx.AsyncClient:
-        """Return the lazily-created pooled HTTP client.
+    def _new_client(self) -> httpx.AsyncClient:
+        """Return a new HTTP client for one call, which the call closes.
+
+        No client outlives its call. An ``httpx.AsyncClient`` is bound to the
+        event loop it first runs on, and one engine instance serves calls on
+        different event loops, one after another (standard-asr protocol
+        IC.12): a client kept from one call would fail in the next.
 
         Returns:
-            The shared :class:`httpx.AsyncClient`.
+            A new :class:`httpx.AsyncClient`.
         """
-        if self._client is None:
-            self._client = httpx.AsyncClient(timeout=self._timeout, verify=self._verify_tls)
-        return self._client
+        return httpx.AsyncClient(timeout=self._timeout, verify=self._verify_tls)
 
     async def transcribe(self, request: BatchRequest) -> BatchResult:
         """Transcribe via the chat-completions endpoint.
@@ -193,11 +195,12 @@ class DashScopeBackend:
             body["top_p"] = request.top_p
         if request.max_completion_tokens is not None:
             body["max_completion_tokens"] = request.max_completion_tokens
-        response = await self._http().post(
-            f"{self._base_url}/chat/completions",
-            headers=self._headers(),
-            json=body,
-        )
+        async with self._new_client() as client:
+            response = await client.post(
+                f"{self._base_url}/chat/completions",
+                headers=self._headers(),
+                json=body,
+            )
         response.raise_for_status()
         return _parse_chat_completion(response.json())
 
@@ -232,23 +235,20 @@ class DashScopeBackend:
             "temperature": request.temperature,
             "asr_options": _asr_options(request),
         }
-        async with self._http().stream(
-            "POST",
-            f"{self._base_url}/chat/completions",
-            headers=self._headers(),
-            json=body,
-        ) as response:
+        async with (
+            self._new_client() as client,
+            client.stream(
+                "POST",
+                f"{self._base_url}/chat/completions",
+                headers=self._headers(),
+                json=body,
+            ) as response,
+        ):
             response.raise_for_status()
             async for line in response.aiter_lines():
                 delta = _parse_chat_sse_line(line)
                 if delta is not None:
                     yield delta
-
-    async def aclose(self) -> None:
-        """Close the pooled HTTP client."""
-        if self._client is not None:
-            await self._client.aclose()
-            self._client = None
 
 
 def _parse_chat_completion(payload: dict[str, object]) -> BatchResult:
